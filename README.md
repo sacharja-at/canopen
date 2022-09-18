@@ -1,6 +1,6 @@
 # canopen
 
-canopen is a Python-script written for use under graphical desktop environments under Linux, that uses plaintext-configuration files to let you decide which (type of) file to open with which command.
+canopen is a Python-script written for use under graphical desktop environments under Linux, that uses plaintext-configuration files to let you decide which (type of) file to open with which command, similar to `xdg-open`, but much more flexible.
 
 I wrote it, because I found the mechanisms provided by the respective desktop environments (like xdg-open) not powerful/flexible enough and simply, not to be to my liking.
 
