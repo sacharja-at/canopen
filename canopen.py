@@ -35,30 +35,44 @@ import fnmatch, os, subprocess, sys
 class Canopen:
 	"everything canopen does is completely contained within this class"
 
+	def bye(self, exitcode):
+		"flush output buffer and exit with exitcode"
+
+		out = sys.stdout
+		if exitcode: out = sys.stderr
+
+		if self.messages:
+			if len(self.messages) == 1:
+				text = self.name+": "+self.messages[0]+"\n"
+			else:
+				text = ""
+				for line in self.messages: text += line+"\n"
+				text += "\n"
+
+			# if an external messenger has been configured, use that
+			if "messenger" in self.setting:
+				messenger = self.setting["messenger"].split()
+
+				try:
+					pr = subprocess.run(messenger+[text])
+				except:
+					out.write(text)
+					sys.stderr.write("{0}: messenger command failed: {1}".format(self.name, messenger))
+					exitcode = 1
+			else:
+				out.write(text)
+
+		sys.exit(exitcode)
+
+
+
 	def message(self, message, exitcode=1):
-		"put out an error message, either with an external program or on stderr, exit if exitcode is set"
+		"save a message to the output buffer, but do not "
+		"flush out that buffer, .bye will do that, which "
+		"is called if exitcode != 0"
 
-		# if there is an external messenger found in settings, use it
-		if "messenger" in self.setting:
-			messenger = self.setting["messenger"].split()
-
-			try:
-				p = subprocess.run(messenger+[message])
-			except:
-				sys.stderr.write(self.name+": messenger command failed: "+" ".join(messenger)+"\n")
-				sys.exit(1)
-
-			if p.returncode:
-				sys.stderr.write(self.name+": messenger command returned error code {0}: ".format(p.returncode)+" ".join(messenger)+"\n")
-				sys.exit(1)
-
-			if exitcode: sys.exit(exitcode)
-
-			return
-
-		# if there is no external messenger, output goes to sys.stderr
-		sys.stderr.write(self.name+": "+message+"\n")
-		if exitcode: sys.exit(exitcode)
+		self.messages.append(message)
+		if exitcode: self.bye(exitcode)
 
 
 
@@ -106,7 +120,7 @@ class Canopen:
 		raw = fp.read()
 		fp.close
 
-		if self.options["verbose"][0]: print("loading configuration: {0}".format(my_path))
+		if self.options["verbose"][0]: self.message("loading configuration: {0}".format(my_path), 0)
 
 		assignment = {
 			"alias":   self.alias,
@@ -155,7 +169,6 @@ class Canopen:
 
 			# if it is an alias, check for loops
 			if keyword == "alias":
-				pass
 				current = key
 
 				while current in self.alias:
@@ -164,7 +177,7 @@ class Canopen:
 
 					current = self.alias[current]
 
-			# if it is an setting, check for a proper key
+			# if it is a setting, check for proper key
 			if keyword == "setting":
 				if key not in valid_settings:
 					self.message("line {0} in {1}: invalid setting “{2}”\nvalid keys for settings are: “{3}”".format(n, my_path, key, "”, “".join(valid_settings)))
@@ -216,9 +229,15 @@ class Canopen:
 			basic[item] = mime_type.split("/")[0]
 
 		if self.options["show-mimes"][0]:
+			my_len = 0
+
 			for item in complete:
-				print("{0} ... {1}".format(item, complete[item]))
-			sys.exit(0)
+				if my_len < len(complete[item]): my_len = len(complete[item])
+
+			for item in complete:
+				self.message("{0} {1}... {2}".format(complete[item], "."*(my_len-len(complete[item])), item), 0)
+
+			self.bye(0)
 
 		# does any pattern match the path of the file?
 		for item in opener:
@@ -279,18 +298,19 @@ class Canopen:
 
 		for c in commands:
 			if self.options["simulate"][0]:
-				print("\n"+c)
+				self.message("\n"+c, 0)
 				for thing in commands[c]:
-					print("  "+thing)
+					self.message("  "+thing, 0)
 			else:
 				cmd = c.split()+commands[c]
 				subprocess.Popen(cmd)
+
+		self.bye(0)    # call this to flush anything in self.messages
 
 
 
 	def print_usage(self):
 		lines = [
-			"",
 			"canopen – a small, versatile script to open files with external programs",
 			"",
 			"Usage: {0} [OPTION]... PATH...".format(self.name),
@@ -314,11 +334,14 @@ class Canopen:
 
 		lines.append("")
 
-		print("\n".join(lines))
+		self.message("\n".join(lines), 0)
+		self.bye(0)
 
 
 
 	def __init__(self, argv):
+		self.messages = [] # to contain the lines of output, see .message and .bye
+
 		self.alias, self.mime, self.pattern, self.setting = {}, {}, {}, {}
 
 		self.loaded_configs = []
@@ -404,15 +427,15 @@ class Canopen:
 
 			self.files.append(item)
 
+		# load config
+		self.config_load()
+
 		if self.options["help"][0]:
 			self.print_usage()
 			sys.exit(0)
 
 		if not self.files:
 			self.message("no files to open, use option “{0} --help” for more information".format(self.name))
-
-		# load config
-		self.config_load()
 
 		# run
 		self.run()
