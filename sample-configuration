@@ -1,0 +1,62 @@
+# This is a sample configuration for canopen.
+
+# When loading a configuration, everything coming after a “#“ will be cut.
+# Also, (then) empty lines will be ignored.
+
+# Each line (that is not to be ignored) starts with
+# a keyword, seperated by one or more spaces/tabs from the
+# key, which is seperated by one or more spaces/tabs from the
+# value, which is the entire rest of the line.
+
+# The keywords are “alias”, “setting”, “mime” and “pattern”.
+
+
+
+# “alias” allows to define an alias for a specific command. Just define the
+# key to be a certain expression, and you may use it as a value to define
+# commands for files that match a certain pattern or are of a certain
+# mime-type.
+
+# Please replace my-favourite-texteditor with *your* favourite text-editor!
+alias   TEXT   my-favourite-texteditor
+
+# You can leave this one alone. It is used to simply ignore files.
+alias   IGNORE   true
+
+# Aliases can refer to other aliases, universalopen will check for loops.
+# Although not required, is recommended to use only capital letters for
+# the names of aliases.
+
+
+
+# “mime” defines, which command is used to open a file of the respective
+# mime-type. If the key is just an expression without a slash (“/”), then
+# the command in question is used for all sub-types.
+#
+# If they key does contain a slash, the command is used for the type/subtype.
+# A definition with type/subtype always takes precedence over a definition
+# with just the type.
+
+# This one makes every text to be opened with the command defined above.
+mime   text   TEXT
+
+
+
+# A “pattern” defines a pattern as used in Unix shells to match file-names.
+# All patterns are, however, case-insensitive.
+
+# Ignore backup-files and a few others
+pattern   *~      IGNORE
+pattern   *.tmp   IGNORE
+pattern   *.bac   IGNORE
+pattern   *.bak   IGNORE
+
+
+
+# A “setting” defines internal options depending on the key,
+# “loadconfig” loads an additional configuration from ~/.config/canopen
+# “messenger” defines an external program to display error-messages
+# “fallback” defines which command to use for files no match was found for.
+
+# you might uncomment the following line if you have gmessage installed:
+#setting   messenger   gxmessage -title canopen -buttons OK:0 -default OK -wrap
