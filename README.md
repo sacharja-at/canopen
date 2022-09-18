@@ -1,6 +1,6 @@
 # canopen
 
-canopen is a Python-script written for use under graphical desktop environments under Linux, that uses plaintext-configuration files to let you decide which (type of) file to open with which command, similar to `xdg-open`, but much more flexible.
+canopen is a Python-script written for use under graphical desktop environments under Linux, that uses plaintext-configuration files to let you decide which (type of) file to open with which command, similary to commands like `xdg-open` but much more flexible.
 
 I wrote it, because I found the mechanisms provided by the respective desktop environments (like xdg-open) not powerful/flexible enough and simply, not to be to my liking.
 
@@ -206,4 +206,4 @@ So, yes, “loadconfig” is basically canopen's equivalent to include- and impo
 canopen, however, will allow you to load any single configuration file only once. This is first and foremost to prevent looping calls, but also to stop me from getting too weird in my configurations.
 
 ## Bugs
-I started this project (at least in this form, which is a completely new script) literally two days ago before I uploaded it today. But I take it that the mechanism about displaying messenges is really not clean, as are many other things. See the disclaimer at the top of this file.
+I started this project (at least in this form, which is a completely new script) literally two days ago before I uploaded it today. A lot of things are really not clean. See the disclaimer at the top of this file.
