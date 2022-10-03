@@ -33,16 +33,18 @@ LICENSE = """
 import fnmatch, os, subprocess, sys
 
 class Canopen:
-	"everything canopen does is completely contained within this class"
+	"everything canopen does is completely contained within this class, "
+	"main() below does basically nothing"
 
 	def bye(self, exitcode):
-		"flush output buffer and exit with exitcode"
+		"exit, but flush out output buffer in .messages first"
 
 		out = sys.stdout
 		if exitcode: out = sys.stderr
 
 		if self.messages:
 			if len(self.messages) == 1:
+				# if there is only one message, add a “canopen: ” to that line
 				text = self.name+": "+self.messages[0]+"\n"
 			else:
 				text = ""
@@ -67,31 +69,26 @@ class Canopen:
 
 
 	def message(self, message, exitcode=1):
-		"save a message to the output buffer, but do not "
-		"flush out that buffer, .bye will do that, which "
-		"is called if exitcode != 0"
+		"save a message to .messages[], and translate it if possible "
+		"using .translations{}; do not flush out that buffer, however "
+		".bye will do that, which is called if exitcode != 0"
 
 		self.messages.append(message)
 		if exitcode: self.bye(exitcode)
 
 
 
-	def config_load(self, path="", from_loadconfig=""):
+	def config_load(self, path="", ext_config="", ext_line=0):
 		"figure out which configuration file to load and load it, "
 		"if path begins with “./” or “/”, a local or absolute path will be loaded, "
-		"otherwise, path will be loaded from ~/.config/canopen"
+		"otherwise, path will be loaded from ~/.config/canopen/"
 		my_path = ""
-
-		# TODO: that thing with ./ or / is not yet documented, and a bit weird anyway
 
 		valid_settings = ["fallback", "messenger", "loadconfig"]
 
 		if path:
-			if path.startswith("./") or path.startswith("/"):
-				my_path = path
-			else:
-				if "HOME" not in os.environ: self.message("{0}: no such environment variable".format("HOME"))
-				my_path = os.path.join(os.environ["HOME"], ".config/canopen", path)
+			if "HOME" not in os.environ: self.message("{0}: no such environment variable".format("HOME"))
+			my_path = os.path.join(os.environ["HOME"], ".config/canopen", path)
 
 			if not os.path.exists(my_path):
 				self.message("could not load configuration, no such file {0}".format(my_path))
@@ -107,7 +104,10 @@ class Canopen:
 
 		# have we already seen that configuration?
 		if my_path in self.loaded_configs:
-			self.message("{0}{1} has already been loaded".format(from_loadconfig, my_path))
+			if ext_config:
+				self.message("line {0} in {1}: {2} has already been loaded".format(ext_line, ext_config, my_path))
+			else:
+				self.message("{0} has already been loaded".format(my_path))
 
 		self.loaded_configs.append(my_path)
 
@@ -184,7 +184,7 @@ class Canopen:
 
 				# handle setting for loadconfig immediately
 				if key == "loadconfig":
-					self.config_load(value, from_loadconfig="line {0} in {1}: ".format(n, my_path))
+					self.config_load(value, my_path, n)
 
 
 
@@ -199,7 +199,7 @@ class Canopen:
 		if ";" in output: output = output.split(";")[0]
 
 		if "/" not in output:
-			sys.stderr.write(" ".join(["file", "-Lbi", path]))
+			self.message(" ".join(["file", "-Lbi", path]), 0)
 			self.message("the above command did not generate valid output")
 
 		return output
@@ -303,7 +303,11 @@ class Canopen:
 					self.message("  "+thing, 0)
 			else:
 				cmd = c.split()+commands[c]
-				subprocess.Popen(cmd)
+				try:
+					subprocess.Popen(cmd)
+
+				except FileNotFoundError:
+					self.message("could not execute command: {0}".format(" ".join(cmd)))
 
 		self.bye(0)    # call this to flush anything in self.messages
 
@@ -341,11 +345,12 @@ class Canopen:
 
 	def __init__(self, argv):
 		self.messages = [] # to contain the lines of output, see .message and .bye
-
 		self.alias, self.mime, self.pattern, self.setting = {}, {}, {}, {}
 
 		self.loaded_configs = []
 		self.files = []
+
+
 		self.options = {
 			"help": [
 				False,
@@ -446,4 +451,3 @@ def main(): Canopen(sys.argv)
 
 
 if __name__ == "__main__": main()
-
