@@ -32,8 +32,64 @@ LICENSE = """
 
 import fnmatch, os, subprocess, sys
 
+def tabalign(text):
+	"Align every column of a text of monospaced type, so that "\
+	"every \\t gets vertically aligned. Also, "\
+	"fill any spaces with the last character of the previous word."
+
+	# break text into lines (by \n) and those into words (by \t)
+	table = []    # contains the cells of the resulting table
+	n = 0         # maximum number of words of any line
+
+	for line in text.split("\n"):
+		table.append( [] )    # start a new line
+		words = line.split("\t")
+		if len(words) > n: n = len(words)
+
+		# add words to this line
+		for word in words: table[-1].append(word)
+
+		# add termination to line
+		table[-1].append(None)
+
+	table.append([])   # add termination to text
+
+	# get maximum width of each column
+	mwc = []
+	for i in range(n): mwc.append(0)
+
+	for line in table:
+		i = 0
+		for word in line:
+			if not word: continue
+			if len(word) > mwc[i]: mwc[i] = len(word)
+			i += 1
+
+	# now do the alignment
+	result = ""
+	li = 0    # line index
+	for line in table:
+		if not table[li]: continue
+
+		wi = 0    # word index
+		for word in line:
+			if not word: continue
+
+			result += word
+
+			if line[wi+1]:
+				result += word[-1] * (mwc[wi]-len(word))
+
+			wi += 1
+
+		li += 1
+		if table[li]: result += "\n"
+
+	return result
+
+
 class Canopen:
-	"everything canopen does is completely contained within this class, "
+	"everything canopen does is completely contained within this class, "+ \
 	"main() below does basically nothing"
 
 	def bye(self, exitcode):
@@ -69,8 +125,8 @@ class Canopen:
 
 
 	def message(self, message, exitcode=1):
-		"save a message to .messages[], and translate it if possible "
-		"using .translations{}; do not flush out that buffer, however "
+		"save a message to .messages[], and translate it if possible "+ \
+		"using .translations{}; do not flush out that buffer, however "+ \
 		".bye will do that, which is called if exitcode != 0"
 
 		self.messages.append(message)
@@ -79,12 +135,12 @@ class Canopen:
 
 
 	def config_load(self, path="", ext_config="", ext_line=0):
-		"figure out which configuration file to load and load it, "
-		"if path begins with “./” or “/”, a local or absolute path will be loaded, "
+		"figure out which configuration file to load and load it, if path"+ \
+		"begins with “./” or “/”, a local or absolute path will be loaded, "+ \
 		"otherwise, path will be loaded from ~/.config/canopen/"
 		my_path = ""
 
-		valid_settings = ["fallback", "messenger", "loadconfig"]
+		valid_settings = ["fallback", "messenger", "runtype", "loadconfig"]
 
 		if path:
 			if "HOME" not in os.environ: self.message("{0}: no such environment variable".format("HOME"))
@@ -181,6 +237,10 @@ class Canopen:
 			if keyword == "setting":
 				if key not in valid_settings:
 					self.message("line {0} in {1}: invalid setting “{2}”\nvalid keys for settings are: “{3}”".format(n, my_path, key, "”, “".join(valid_settings)))
+
+				if key == "runtype":
+					if value not in ["terminal", "gui"]:
+						self.message("line {0} in {1}: invalid value for “runtype”, valid values are “terminal” and “gui”".format(n, my_path))
 
 				# handle setting for loadconfig immediately
 				if key == "loadconfig":
@@ -304,7 +364,10 @@ class Canopen:
 			else:
 				cmd = c.split()+commands[c]
 				try:
-					subprocess.Popen(cmd)
+					if "runtype" in self.setting and self.setting["runtype"] == "terminal":
+						subprocess.run(cmd)
+					else:
+						subprocess.Popen(cmd)
 
 				except FileNotFoundError:
 					self.message("could not execute command: {0}".format(" ".join(cmd)))
@@ -314,31 +377,20 @@ class Canopen:
 
 
 	def print_usage(self):
-		lines = [
-			"canopen – a small, versatile script to open files with external programs",
-			"",
-			"Usage: {0} [OPTION]... PATH...".format(self.name),
-			"",
-			"Options:",
-		]
+		usagetext = "canopen – a small, versatile script to open files with external programs\n"+ \
+		"\n"+ \
+		"Usage: {0} [OPTION]... PATH...\n"+ \
+		"\n"+ \
+		"Options:\n".format(self.name)
 
-		tab1, tab2 = 0, 0
-
-		for option in self.options:
-			if len(option) > tab1: tab1 = len(option)
-			if len(self.options[option][1]) > tab2: tab2 = len(self.options[option][1])
+		optionstext = ""
 
 		for option in self.options:
 			parameter = self.options[option][1]
 			description = self.options[option][-1]
+			optionstext += "  --{0} {1} ...\t {2}\n".format(option, parameter, description)
 
-			spacer = "."*(tab1+tab2-len(option)-len(parameter)+1)
-
-			lines.append("  --{0} {1} {2} {3}".format(option, parameter, spacer, description))
-
-		lines.append("")
-
-		self.message("\n".join(lines), 0)
+		self.message(usagetext + tabalign(optionstext))
 		self.bye(0)
 
 
