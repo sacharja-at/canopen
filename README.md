@@ -25,6 +25,7 @@ Also, with canopen, I have a much easier time to keep my configurations up to da
       * [key fallback](#key-fallback)
       * [key messenger](#key-messenger)
       * [key loadconfig](#key-loadconfig)
+      * [key runtype](#key-runtype)
 * [Bugs](#bugs)
 
 ## License
@@ -160,6 +161,7 @@ Keys following the keyword `setting` influence canopen's behaviour. Valid keys f
 * fallback
 * messenger
 * loadconfig
+* runtype
 
 ##### key fallback
 
@@ -211,6 +213,13 @@ alias     MIDI            qmmp
 So, yes, “loadconfig” is basically canopen's equivalent to include- and import-commands in programming languages.
 
 canopen, however, will allow you to load any single configuration file only once. This is first and foremost to prevent looping calls, but also to stop me from getting too weird in my configurations.
+
+##### key runtype
+By default, canopen runs all tasks “in the background”, as you would in a graphical interface. This behaviour can however be altered in a way that canopen runs tasks “in the foreground”, as you would in a terminal. Consequently, there are two different values for `runtype`, `terminal` and `gui`. `gui` is the default. If you want to use canopen over an ssh-connection (where there is no graphical interface available), you might for instance create a configuration for such an application, in which you define
+
+```
+setting   runtype   terminal
+```
 
 ## Bugs
 This is my very first “real” project, and I am not a professional. Expect a lot of unclean stuff and some bugs. See the disclaimer at the top of this file.
